@@ -2,7 +2,7 @@
 #include <background.hpp>
 #include <iostream>
 #include <chrono>
-#include <T_tetramino.hpp>
+#include <S_tetramino.hpp>
 
 
 inline auto current_time()
@@ -19,7 +19,7 @@ int main()
     Background background("resources/images/background.jpg");
     background.set_position({0, 0});
 
-    TTetramino t_tetramino;
+    STetramino z_tetramino;
 
     while (window.isOpen())
     {
@@ -44,7 +44,7 @@ int main()
         window.clear();
 
         background.render(window);
-        t_tetramino.render(window);
+        z_tetramino.render(window);
 
 
         window.display();

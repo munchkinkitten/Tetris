@@ -31,7 +31,7 @@ void JTetramino::set_start_pos(sf::Vector2u position)
 
 void JTetramino::set_1_pos(sf::Vector2u position)
 {
-    position.x += SIZE;
+    position.x += 2 * SIZE;
     for (int i = 0; i < 3; i++)
     {
         tetramino_sprite[i]->setPosition(sf::Vector2f(position.x - SIZE, position.y));
@@ -48,7 +48,7 @@ void JTetramino::set_1_pos(sf::Vector2u position)
 
 void JTetramino::set_2_pos(sf::Vector2u position)
 {
-    position.y += SIZE;
+    position.y += 2 * SIZE;
     for (int i = 0; i < 3; i++)
     {
         tetramino_sprite[i]->setPosition(sf::Vector2f(position.x, position.y - SIZE));
@@ -65,7 +65,7 @@ void JTetramino::set_2_pos(sf::Vector2u position)
 
 void JTetramino::set_3_pos(sf::Vector2u position)
 {
-    position.x -= SIZE;
+    position.x -= 2 * SIZE;
     for (int i = 0; i < 3; i++)
     {
         tetramino_sprite[i]->setPosition(sf::Vector2f(position.x + SIZE, position.y));

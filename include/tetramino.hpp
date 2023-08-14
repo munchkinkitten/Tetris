@@ -14,7 +14,7 @@ protected:
     virtual void set_start_pos(sf::Vector2u position);
 
 public:
-    int SIZE = 60;
+    unsigned int SIZE = 60;
     Tetramino();
     bool can_move_down();
     bool can_move_left();

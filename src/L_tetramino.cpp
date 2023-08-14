@@ -31,11 +31,11 @@ void LTetramino::set_start_pos(sf::Vector2u position)
 
 void LTetramino::set_1_pos(sf::Vector2u position)
 {
-    position.x -= SIZE;
+    position.x += 2 * SIZE;
     for (int i = 0; i < 3; i++)
     {
-        tetramino_sprite[i]->setPosition(sf::Vector2f(position.x + SIZE, position.y));
-        position.x += SIZE;
+        tetramino_sprite[i]->setPosition(sf::Vector2f(position.x - SIZE, position.y));
+        position.x -= SIZE;
     }
 
     position.y += SIZE;
@@ -48,11 +48,11 @@ void LTetramino::set_1_pos(sf::Vector2u position)
 
 void LTetramino::set_2_pos(sf::Vector2u position)
 {
-    position.y -= SIZE;
+    position.y += 2 * SIZE;
     for (int i = 0; i < 3; i++)
     {
-        tetramino_sprite[i]->setPosition(sf::Vector2f(position.x, position.y + SIZE));
-        position.y += SIZE;
+        tetramino_sprite[i]->setPosition(sf::Vector2f(position.x, position.y - SIZE));
+        position.y -= SIZE;
     }
 
     position.x -= SIZE;
@@ -65,7 +65,7 @@ void LTetramino::set_2_pos(sf::Vector2u position)
 
 void LTetramino::set_3_pos(sf::Vector2u position)
 {
-    position.x += SIZE;
+    position.x += 2 * SIZE;
     for (int i = 0; i < 3; i++)
     {
         tetramino_sprite[i]->setPosition(sf::Vector2f(position.x - SIZE, position.y));

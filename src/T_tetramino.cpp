@@ -7,7 +7,7 @@ TTetramino::TTetramino()
     for (int i = 0; i < 4; i++)
     {
         sf::Sprite* square = new sf::Sprite();
-        square->setTexture(*different_squares[1]);
+        square->setTexture(*different_squares[4]);
         tetramino_sprite.push_back(square);
     }
 
@@ -32,7 +32,7 @@ void TTetramino::set_start_pos(sf::Vector2u position)
 
 void TTetramino::set_1_pos(sf::Vector2u position)
 {
-    position.y -= SIZE;
+    position.y -= 2 * SIZE;
     for (int i = 0; i < 3; i++)
     {
         tetramino_sprite[i]->setPosition(sf::Vector2f(position.x, position.y + SIZE));
@@ -68,7 +68,7 @@ void TTetramino::set_2_pos(sf::Vector2u position)
 
 void TTetramino::set_3_pos(sf::Vector2u position)
 {
-    position.y -= SIZE;
+    position.y -= 2 * SIZE;
     for (int i = 0; i < 3; i++)
     {
         tetramino_sprite[i]->setPosition(sf::Vector2f(position.x, position.y + SIZE));

@@ -107,19 +107,19 @@ void Tetramino::move_right()
     }
 }
 
-Tetramino::~Tetramino()
-{}
-
 void Tetramino::update()
 {
-    //std::clog << clock.getElapsedTime().asSeconds() << std::endl;
-    //    std::clog << tetramino_sprite[0]->getPosition().y << std::endl;
-
     if (clock.getElapsedTime() >= second && can_move_down())
     {
         move_down();
         can_rotate = true;
         clock.restart();
+    }
+
+    for (auto i : tetramino_sprite)
+    {
+        if (i->getPosition().x >= 640 - 20 - SIZE || i->getPosition().x <= 20)
+            rotate();
     }
 }
 
@@ -131,3 +131,7 @@ void Tetramino::process_event(const sf::Event& event)
     if (event.type == sf::Event::KeyPressed && can_move_down())
         move(event);
 }
+
+Tetramino::~Tetramino()
+{}
+
