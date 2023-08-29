@@ -2,18 +2,34 @@
 #include <SFML/Graphics.hpp>
 #include <set>
 
-class Object{
-private:
-    static std::set<Object*> m_objects;
+namespace Tetris
+{
 
-public:
-    Object();
-    virtual void render(sf::RenderWindow& window);
-    virtual void update();
-    virtual void process_event(const sf::Event& event);
+    using Priority = unsigned int;
 
-    static void destroy_all();
-    static const std::set<Object*>& objects();
+    class Object
+    {
+    public:
+        using ObjectsSet = std::set<Object*>;
 
-    virtual ~Object();
-};
+    private:
+        static ObjectsSet m_objects;
+        Priority m_render_priority = 0;
+        static Priority m_max_priority;
+
+    public:
+        static const ObjectsSet& objects();
+        static Priority max_priority();
+
+        Priority render_priority() const;
+        void render_priority(Priority priority);
+
+        Object();
+
+        virtual void update();
+        virtual void render(sf::RenderWindow& window);
+        virtual void process_event(const sf::Event& event);
+
+        virtual ~Object();
+    };
+}// namespace Tetris

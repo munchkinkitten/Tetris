@@ -1,39 +1,50 @@
 #include <object.hpp>
 
-std::set<Object*> Object::m_objects;
-
-Object::Object()
+namespace Tetris
 {
-    m_objects.insert(this);
-}
+    Object::ObjectsSet Object::m_objects;
+    Priority Object::m_max_priority;
 
-void Object::update()
-{}
-
-void Object::render(sf::RenderWindow& window)
-{
-
-}
-
-void Object::process_event(const sf::Event& event)
-{
-
-}
-
-const std::set<Object*>& Object::objects()
-{
-    return m_objects;
-}
-
-void Object::destroy_all()
-{
-    for(Object* object : objects())
+    const Object::ObjectsSet& Object::objects()
     {
-        delete object;
+        return m_objects;
     }
-}
 
-Object::~Object()
-{
-    m_objects.erase(this);
-}
+    Priority Object::max_priority()
+    {
+        return m_max_priority;
+    }
+
+    Priority Object::render_priority() const
+    {
+        return m_render_priority;
+    }
+
+    void Object::render_priority(Priority priority)
+    {
+        m_render_priority = priority;
+        if (priority > m_max_priority)
+        {
+            m_max_priority = priority;
+        }
+    }
+
+    Object::Object()
+    {
+        m_objects.insert(this);
+    }
+
+    void Object::update()
+    {}
+
+    void Object::render(sf::RenderWindow& window)
+    {}
+
+    void Object::process_event(const sf::Event& event)
+    {}
+
+    Object::~Object()
+    {
+        m_objects.erase(this);
+    }
+}// namespace Tetris

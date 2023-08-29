@@ -1,25 +1,16 @@
-#include <background.hpp>
+#include <backgroud.hpp>
 
-Background::Background(const char* filepath)
+
+namespace Tetris
 {
-    background_texture.loadFromFile(filepath);
-    background_sprite.setTexture(background_texture);
-}
+    Background::Background()
+    {
+        m_texture.loadFromFile("resources/background.jpg");
+        m_sprite.setTexture(m_texture, true);
+    }
 
-void Background::set_position(const sf::Vector2f& position)
-{
-    background_sprite.setPosition(position);
+    void Background::render(sf::RenderWindow& window)
+    {
+        window.draw(m_sprite);
+    }
 }
-
-const sf::Vector2f& Background::get_position()
-{
-    return background_sprite.getPosition();
-}
-
-void Background::render(sf::RenderWindow& window)
-{
-    window.draw(background_sprite);
-}
-
-Background::~Background()
-{}

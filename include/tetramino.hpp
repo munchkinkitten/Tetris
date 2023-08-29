@@ -1,31 +1,55 @@
 #pragma once
-
+#include <SFML/Graphics.hpp>
+#include <block.hpp>
 #include <object.hpp>
-#include <chrono>
+#include <functional>
 
-class Tetramino : public Object
+namespace Tetris
 {
-protected:
-    std::vector<sf::Texture*> different_squares;
-    std::vector<sf::Sprite*> tetramino_sprite;
-    sf::Clock clock;
-    sf::Time second = sf::seconds(1);
-    bool can_rotate = false;
-    virtual void set_start_pos(sf::Vector2u position);
+    class Tetramino : public Object
+    {
+    protected:
+        static std::vector<sf::Texture> m_textures;
+        static std::vector<Tetramino* (*) ()> m_constructors;
+        using Func1 = std::function<bool(const Position&)>;
+        using Func2 = std::function<void(Position&)>;
 
-public:
-    unsigned int SIZE = 60;
-    Tetramino();
-    bool can_move_down();
-    bool can_move_left();
-    bool can_move_right();
-    void move_down();
-    void move(const sf::Event& event);
-    void move_right();
-    void move_left();
-    virtual void rotate() = 0;
-    void render(sf::RenderWindow& window) override;
-    void update() override;
-    void process_event(const sf::Event& event) override;
-    ~Tetramino();
-};
+        std::vector<class Block*> m_blocks;
+        std::vector<MoveDir> m_moves;
+
+        bool m_is_active = true;
+
+        static void load_textures();
+        bool can_move(const Func1& f1, const Func2& f2) const;
+        void move(int blocks, MoveDir dir);
+
+    protected:
+
+        int rotation_angle = 0;
+
+        sf::Texture* m_base_texture = nullptr;
+
+        Block* new_block(const Position& pos = {0, 0}, int index = -1);
+        virtual bool can_rotate();
+
+        bool is_valid_position(const Position& pos);
+
+    public:
+        Tetramino();
+
+        virtual void rotate();
+
+        bool is_active() const;
+        void is_active(bool flag);
+        void remove_block(class Block* block);
+        static Tetramino* random_tetramino();
+        void render(sf::RenderWindow& window) override;
+        bool can_move_down() const;
+        bool can_move_left() const;
+        bool can_move_right() const;
+        void update() override;
+        void process_event(const sf::Event& event) override;
+
+        ~Tetramino();
+    };
+}// namespace Tetris
