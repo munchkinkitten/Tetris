@@ -14,5 +14,6 @@ namespace Tetris
         Map map;
 
         Block*& slot_at(const Position& pos);
+        GameMap& clean();
     };
 }

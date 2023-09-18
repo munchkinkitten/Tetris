@@ -13,4 +13,16 @@ namespace Tetris
         throw std::runtime_error("Index out of range!");
     }
 
+    GameMap& GameMap::clean()
+    {
+        for(Row& row : map)
+        {
+            for(Block*& blk : row)
+            {
+                blk = nullptr;
+            }
+        }
+
+        return *this;
+    }
 }

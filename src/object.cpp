@@ -1,4 +1,5 @@
 #include <object.hpp>
+#include <list>
 
 namespace Tetris
 {
@@ -15,6 +16,23 @@ namespace Tetris
         return m_max_priority;
     }
 
+    void Object::clean_tetraminos()
+    {
+        std::list<Object*> tetraminos;
+        for(Object* object : m_objects)
+        {
+            if(object->is_tetramino())
+            {
+                tetraminos.push_back(object);
+            }
+        }
+
+        for(Object* tetramino : tetraminos)
+        {
+            delete tetramino;
+        }
+    }
+
     Priority Object::render_priority() const
     {
         return m_render_priority;
@@ -29,10 +47,28 @@ namespace Tetris
         }
     }
 
+    bool Object::is_tetramino() const
+    {
+        return m_is_tetramino;
+    }
+
     Object::Object()
     {
         m_objects.insert(this);
     }
+
+    void Object::update_all()
+    {
+        for (Object* object : Object::objects())
+        {
+            object->update();
+        }
+    }
+
+//    void Object::set_update_status(bool active)
+//    {
+//        m_update_status = active;
+//    }
 
     void Object::update()
     {}

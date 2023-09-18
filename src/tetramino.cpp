@@ -43,6 +43,16 @@ namespace Tetris
         return true;
     }
 
+    void Tetramino::initialize()
+    {
+        for (const BlockEntry& entry : required_start_blocks)
+        {
+            new_block(entry.pos, entry.index);
+        }
+
+        m_is_valid = true;
+    }
+
     Block* Tetramino::new_block(const Position& pos, int index)
     {
         Block* block = new Block(this, new sf::Sprite(*m_base_texture), index);
@@ -67,6 +77,8 @@ namespace Tetris
 
     Tetramino::Tetramino()
     {
+        //std::clog << "Tetramino!" << std::endl;
+        m_is_tetramino = true;
         if (m_textures.empty())
         {
             load_textures();
@@ -75,7 +87,11 @@ namespace Tetris
         render_priority(1);
 
         m_base_texture = &m_textures[rand() % m_textures.size()];
-        m_blocks.resize(4);
+        m_blocks.resize(4, nullptr);
+
+        clock.restart();
+
+        printf("CREATE: %p\n", this);
     }
 
     bool Tetramino::is_active() const
@@ -111,6 +127,9 @@ namespace Tetris
 
     void Tetramino::render(sf::RenderWindow& window)
     {
+        if (!m_is_valid)
+            return;
+
         for (Block* block : m_blocks)
         {
             window.draw(*block->m_sprite);
@@ -119,6 +138,9 @@ namespace Tetris
 
     bool Tetramino::can_move(const Func1& f1, const Func2& f2) const
     {
+        if (m_blocks.empty())
+            return false;
+
         GameMap* map = Game::instance()->map();
 
         for (Block* block : m_blocks)
@@ -143,7 +165,6 @@ namespace Tetris
     bool Tetramino::can_move_down() const
     {
         static Func1 f1 = [](const Position& pos) -> bool { return pos.y < 19; };
-
         static Func2 f2 = [](Position& pos) { pos.y += 1; };
 
         return can_move(f1, f2);
@@ -152,7 +173,6 @@ namespace Tetris
     bool Tetramino::can_move_left() const
     {
         static Func1 f1 = [](const Position& pos) -> bool { return pos.x > 0; };
-
         static Func2 f2 = [](Position& pos) { pos.x -= 1; };
 
         return can_move(f1, f2);
@@ -161,7 +181,6 @@ namespace Tetris
     bool Tetramino::can_move_right() const
     {
         static Func1 f1 = [](const Position& pos) -> bool { return pos.x < 9; };
-
         static Func2 f2 = [](Position& pos) { pos.x += 1; };
 
         return can_move(f1, f2);
@@ -186,8 +205,14 @@ namespace Tetris
 
     void Tetramino::process_event(const sf::Event& event)
     {
-        if (event.type == sf::Event::KeyPressed && m_is_active)
+        if (event.type == sf::Event::KeyPressed && (m_is_active || abs(m_accept_events_count) > 0))
         {
+            m_accept_events_count -= 1;
+            bool active_status = m_is_active;
+            bool need_create_tetramino = m_need_create_tetramino;
+            m_need_create_tetramino = false;
+
+            m_is_active = true;
             if (event.key.code == sf::Keyboard::Key::Right && can_move_right())
             {
                 move(1, MoveDir::Right);
@@ -202,27 +227,100 @@ namespace Tetris
                 rotate();
                 rotation_angle = (rotation_angle + 90) % 360;
             }
+            else if (event.key.code == sf::Keyboard::Down && can_move_down())
+            {
+                move(1, MoveDir::Down);
+            }else
+            {
+                m_accept_events_count += 1;
+                m_is_active = active_status;
+                m_need_create_tetramino = need_create_tetramino;
+            }
         }
+    }
+
+    bool Tetramino::check_game_over()
+    {
+        bool game_over = false;
+
+        GameMap* game_map = Game::instance()->map();
+
+        for (const BlockEntry& entry : required_start_blocks)
+        {
+            game_over = game_map->slot_at(entry.pos) != nullptr;
+            if (!game_over)
+            {
+                Position second_pos = {entry.pos.x, entry.pos.y + 1};
+                game_over           = game_map->slot_at(second_pos) != nullptr;
+            }
+
+            if (game_over)
+            {
+                break;
+            }
+        }
+
+        if (game_over)
+        {
+            Game::instance()->stage(GameStage::GameOver);
+        }
+        return game_over;
     }
 
     void Tetramino::update()
     {
+        if (m_is_active && !can_move_down())
+        {
+            m_is_active             = false;
+            m_need_create_tetramino = true;
+            m_accept_events_count = 1;
+        }
+
+        if (clock.getElapsedTime() < second)
+        {
+            return;
+        }
+
+        if (m_need_create_tetramino)
+        {
+            Tetramino* tetramino = Tetramino::random_tetramino();
+            if (tetramino->check_game_over())
+            {
+                tetramino->m_is_active = false;
+                return;
+            }
+            tetramino->initialize();
+            m_need_create_tetramino = false;
+            m_accept_events_count = 0;
+            return;
+        }
+
         if (m_is_active && can_move_down())
         {
             move(1, MoveDir::Down);
+            clock.restart();
         }
-        else if (m_is_active)
+
+        if(m_blocks.empty())
         {
-            Tetramino::random_tetramino();
-            m_is_active = false;
+            delete this;
         }
     }
 
     Tetramino::~Tetramino()
     {
-        for (Block* block : m_blocks)
+        printf("DESTROY: %p\n", this);
+        while (!m_blocks.empty())
         {
-            delete block;
+            Block* block = m_blocks.back();
+            if (block)
+            {
+                delete block;
+            }
+            else
+            {
+                m_blocks.pop_back();
+            }
         }
     }
 
@@ -271,13 +369,14 @@ namespace Tetris
             }
         }
 
+
         ITetramino()
         {
             Position pos = {0, 0};
             for (int i = 0; i < 4; i++)
             {
                 pos.x = 3 + i;
-                new_block(pos, i);
+                required_start_blocks.push_back(BlockEntry(pos, i));
             }
         }
 
@@ -317,7 +416,7 @@ namespace Tetris
                 {
                     pos.x = 4 + i;
                     pos.y = j;
-                    new_block(pos);
+                    required_start_blocks.push_back(BlockEntry(pos));
                 }
             }
         }
@@ -349,10 +448,10 @@ namespace Tetris
             for (int i = 0; i < 3; i++)
             {
                 pos.x = 4 + i;
-                new_block(pos, i + 2 > 3 ? 0 : i + 2);
+                required_start_blocks.push_back(BlockEntry(pos, i + 2 > 3 ? 0 : i + 2));
             }
 
-            new_block({5, 1}, 1);
+            required_start_blocks.push_back(BlockEntry({5, 1}, 1));
         }
 
         Position recursive_rotate(Block* block)
@@ -397,29 +496,29 @@ namespace Tetris
 
             switch (index)
             {
-            case 0:
-                pos_offset.y = 1;
-                pos_offset.x = 1;
-                break;
-            case 2:
-                pos_offset.y = -1;
-                pos_offset.x = -1;
-                break;
-            case 3:
-                if (rotation_angle == 0)
-                    pos_offset.y = -2;
-                else if (rotation_angle == 90)
-                    pos_offset.x = 2;
-                else if (rotation_angle == 180)
-                    pos_offset.y = 2;
-                else
-                    pos_offset.x = -2;
+                case 0:
+                    pos_offset.y = 1;
+                    pos_offset.x = 1;
+                    break;
+                case 2:
+                    pos_offset.y = -1;
+                    pos_offset.x = -1;
+                    break;
+                case 3:
+                    if (rotation_angle == 0)
+                        pos_offset.y = -2;
+                    else if (rotation_angle == 90)
+                        pos_offset.x = 2;
+                    else if (rotation_angle == 180)
+                        pos_offset.y = 2;
+                    else
+                        pos_offset.x = -2;
 
-                return pos + pos_offset;
-                break;
+                    return pos + pos_offset;
+                    break;
 
-            default:
-                break;
+                default:
+                    break;
             }
 
             if (use_vertical)
@@ -438,15 +537,16 @@ namespace Tetris
             for (int i = 0; i < 3; i++)
             {
                 pos.y = i;
-                new_block(pos, i);
+                required_start_blocks.push_back(BlockEntry(pos, i));
             }
 
-            new_block({4, 2}, 3);
+            required_start_blocks.push_back(BlockEntry({4, 2}, 3));
         }
 
         bool can_rotate() override
         {
-            return is_valid_position(next_position(m_blocks[0])) && is_valid_position(next_position(m_blocks[2])) && is_valid_position(next_position(m_blocks[3]));
+            return is_valid_position(next_position(m_blocks[0])) && is_valid_position(next_position(m_blocks[2])) &&
+                   is_valid_position(next_position(m_blocks[3]));
         }
 
         void rotate() override
@@ -518,15 +618,16 @@ namespace Tetris
             for (int i = 0; i < 3; i++)
             {
                 pos.y = i;
-                new_block(pos, i);
+                required_start_blocks.push_back(BlockEntry(pos, i));
             }
 
-            new_block({6, 2}, 3);
+            required_start_blocks.push_back(BlockEntry({6, 2}, 3));
         }
 
         bool can_rotate() override
         {
-            return is_valid_position(next_position(m_blocks[0])) && is_valid_position(next_position(m_blocks[2])) && is_valid_position(next_position(m_blocks[3]));
+            return is_valid_position(next_position(m_blocks[0])) && is_valid_position(next_position(m_blocks[2])) &&
+                   is_valid_position(next_position(m_blocks[3]));
         }
 
         void rotate() override
@@ -586,14 +687,14 @@ namespace Tetris
             for (int i = 0; i < 2; i++)
             {
                 pos.x = 5 + i;
-                new_block(pos, i);
+                required_start_blocks.push_back(BlockEntry(pos, i));
             }
 
             pos.y = 1;
             for (int i = 0; i < 2; i++)
             {
                 pos.x = 4 + i;
-                new_block(pos, i + 2);
+                required_start_blocks.push_back(BlockEntry(pos, i + 2));
             }
         }
 
@@ -658,14 +759,14 @@ namespace Tetris
             for (int i = 0; i < 2; i++)
             {
                 pos.x = 4 + i;
-                new_block(pos, i);
+                required_start_blocks.push_back(BlockEntry(pos, i));
             }
 
             pos.y = 1;
             for (int i = 0; i < 2; i++)
             {
                 pos.x = 5 + i;
-                new_block(pos, i + 2);
+                required_start_blocks.push_back(BlockEntry(pos, i + 2));
             }
         }
 
@@ -682,12 +783,12 @@ namespace Tetris
     };
 
     std::vector<Tetramino* (*) ()> Tetramino::m_constructors = {
-            //[]() -> Tetramino* { return new ITetramino(); },   //
-            //[]() -> Tetramino* { return new CubeTetramino(); },//
-            //[]() -> Tetramino* { return new TTetramino(); },   //
+            []() -> Tetramino* { return new ITetramino(); },   //
+            []() -> Tetramino* { return new CubeTetramino(); },//
+            []() -> Tetramino* { return new TTetramino(); },   //
             []() -> Tetramino* { return new JTetramino(); },   //
-            //[]() -> Tetramino* { return new LTetramino(); },   //
-            //[]() -> Tetramino* { return new STetramino(); },   //
-            //[]() -> Tetramino* { return new ZTetramino(); },
+            []() -> Tetramino* { return new LTetramino(); },   //
+            []() -> Tetramino* { return new STetramino(); },   //
+            []() -> Tetramino* { return new ZTetramino(); },
     };
 }// namespace Tetris

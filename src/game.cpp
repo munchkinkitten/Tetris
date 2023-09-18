@@ -1,7 +1,9 @@
 #include <SFML/Graphics.hpp>
 #include <backgroud.hpp>
 #include <game.hpp>
+#include <iostream>
 #include <tetramino.hpp>
+#include <thread>
 
 namespace Tetris
 {
@@ -30,8 +32,8 @@ namespace Tetris
         m_game = this;
         sf::VideoMode mode(400, 870);
         m_window = new sf::RenderWindow(mode, "Tetris");
-        m_window->setFramerateLimit(3);
-        active(true);
+        m_window->setFramerateLimit(30);
+        stage(GameStage::Launched);
     }
 
     Game::~Game()
@@ -45,6 +47,12 @@ namespace Tetris
         sf::Event event;
         while (window().pollEvent(event))
         {
+            if (m_stage == GameStage::GameOver)
+            {
+                for (int i = 0; i < 50; i++) std::clog << i << std::endl;
+                return;
+            }
+
             for (Object* object : Object::objects())
             {
                 object->process_event(event);
@@ -58,7 +66,11 @@ namespace Tetris
         srand(time(nullptr));
         new Background();
 
-        Tetramino::random_tetramino();
+        game_over_texture.loadFromFile("resources/game_over.png");
+        game_over_sprite.setTexture(game_over_texture);
+        game_over_sprite.setPosition({static_cast<float>(m_window->getSize().x - game_over_texture.getSize().x) / 2,
+                                      static_cast<float>(m_window->getSize().y - game_over_texture.getSize().y) / 2});
+
         return *this;
     }
 
@@ -66,7 +78,7 @@ namespace Tetris
     {
         if (event.type == sf::Event::Closed)
         {
-            active(false);
+            stage(GameStage::ForcedExit);
         }
     }
 
@@ -75,36 +87,70 @@ namespace Tetris
         return m_map;
     }
 
-
     int Game::start()
     {
-        while (active())
+        init();
+
+        m_stage = GameStage::Launched;
+
+        while (start_window() != UserChoiceOnStartWindow::Exit)
         {
-            process_events();
+            Object::clean_tetraminos();
+            m_map->clean();
+            Tetramino::random_tetramino()->initialize();
 
-            // Update all
-            for (Object* object : Object::objects())
+            m_stage = GameStage::Playing;
+            while (m_stage == GameStage::Playing)
             {
-                object->update();
-            }
+                process_events();
+                // Update all
+                Object::update_all();
 
-            window().clear();
-            render_window();
-            window().display();
+                window().clear();
+                render_window();
+                window().display();
+            }
         }
 
         return 0;
     }
 
-    bool Game::active() const
+    Game& Game::stage(GameStage stage)
     {
-        return m_game_active;
+        m_stage = stage;
+        return *this;
     }
 
-    Game& Game::active(bool flag)
+    GameStage Game::stage()
     {
-        m_game_active = flag;
-        return *this;
+        return m_stage;
+    }
+
+
+    UserChoiceOnStartWindow Game::start_window()
+    {
+        if (m_stage == GameStage::ForcedExit)
+        {
+            return UserChoiceOnStartWindow::Exit;
+        }
+
+        if (m_stage == GameStage::GameOver)
+        {
+            game_over();
+            m_window->draw(game_over_sprite);
+            return UserChoiceOnStartWindow::Exit;
+        }
+
+        else if (m_stage == GameStage::Launched)
+        {
+        }
+
+        return UserChoiceOnStartWindow::StartGame;
+    }
+
+    void Game::game_over()
+    {
+        m_stage = GameStage::GameOver;
     }
 
     sf::RenderWindow& Game::window() const
@@ -180,4 +226,5 @@ namespace Tetris
             i--;
         }
     }
+
 }// namespace Tetris

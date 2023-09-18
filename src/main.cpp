@@ -4,7 +4,7 @@
 
 int main()
 {
-    auto result = Tetris::Game::instance()->init().start();
+    auto result = Tetris::Game::instance()->start();
     Tetris::Game::destroy_all();
     return result;
 }
