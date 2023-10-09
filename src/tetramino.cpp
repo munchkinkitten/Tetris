@@ -1,11 +1,13 @@
+#include <SFML/Audio.hpp>
 #include <game.hpp>
 #include <game_map.hpp>
 #include <iostream>
+#include <random>
 #include <tetramino.hpp>
-
 
 namespace Tetris
 {
+
     std::vector<sf::Texture> Tetramino::m_textures;
 
     void Tetramino::load_textures()
@@ -13,7 +15,7 @@ namespace Tetris
         m_textures.resize(7);
         for (int i = 1; i <= 7; i++)
         {
-            std::string name = std::string("resources/") + std::to_string(i) + "_sq.png";
+            std::string name = std::string("resources/cubic/") + std::to_string(i) + "_sq.png";
             m_textures[i - 1].loadFromFile(name);
         }
     }
@@ -86,11 +88,12 @@ namespace Tetris
 
         render_priority(1);
 
-        m_base_texture = &m_textures[rand() % m_textures.size()];
+        std::random_device rand;
+        std::uniform_int_distribution<int> distribution(0, m_textures.size() - 1);
+        m_base_texture = &m_textures[distribution(rand)];
+
         m_blocks.resize(4, nullptr);
-
         clock.restart();
-
         printf("CREATE: %p\n", this);
     }
 
@@ -121,7 +124,10 @@ namespace Tetris
 
     Tetramino* Tetramino::random_tetramino()
     {
-        int index = rand() % m_constructors.size();
+        std::random_device rand;
+        std::uniform_int_distribution<int> distribution(0, m_constructors.size() - 1);
+
+        int index = distribution(rand);
         return m_constructors[index]();
     }
 
@@ -143,8 +149,13 @@ namespace Tetris
 
         GameMap* map = Game::instance()->map();
 
+        int blocks_count = 0;
+
         for (Block* block : m_blocks)
         {
+            if (block == nullptr)
+                continue;
+            blocks_count += 1;
             Position pos = block->position();
             if (!f1(pos))
             {
@@ -159,7 +170,7 @@ namespace Tetris
             }
         }
 
-        return true;
+        return blocks_count != 0;
     }
 
     bool Tetramino::can_move_down() const
@@ -208,9 +219,9 @@ namespace Tetris
         if (event.type == sf::Event::KeyPressed && (m_is_active || abs(m_accept_events_count) > 0))
         {
             m_accept_events_count -= 1;
-            bool active_status = m_is_active;
+            bool active_status         = m_is_active;
             bool need_create_tetramino = m_need_create_tetramino;
-            m_need_create_tetramino = false;
+            m_need_create_tetramino    = false;
 
             m_is_active = true;
             if (event.key.code == sf::Keyboard::Key::Right && can_move_right())
@@ -225,15 +236,21 @@ namespace Tetris
             else if (event.key.code == sf::Keyboard::Up && can_rotate())
             {
                 rotate();
+                Game::instance()->play_rotate_sound();
                 rotation_angle = (rotation_angle + 90) % 360;
+            }
+            else if (event.key.code == sf::Keyboard::Up && !can_rotate())
+            {
+                Game::instance()->play_not_sound();
             }
             else if (event.key.code == sf::Keyboard::Down && can_move_down())
             {
                 move(1, MoveDir::Down);
-            }else
+            }
+            else
             {
                 m_accept_events_count += 1;
-                m_is_active = active_status;
+                m_is_active             = active_status;
                 m_need_create_tetramino = need_create_tetramino;
             }
         }
@@ -263,17 +280,21 @@ namespace Tetris
         if (game_over)
         {
             Game::instance()->stage(GameStage::GameOver);
+            Game::instance()->play_G_O_sound();
         }
         return game_over;
     }
 
     void Tetramino::update()
     {
+        if (Game::instance()->stage() != GameStage::Playing)
+            return;
+
         if (m_is_active && !can_move_down())
         {
             m_is_active             = false;
             m_need_create_tetramino = true;
-            m_accept_events_count = 1;
+            m_accept_events_count   = 1;
         }
 
         if (clock.getElapsedTime() < second)
@@ -291,7 +312,7 @@ namespace Tetris
             }
             tetramino->initialize();
             m_need_create_tetramino = false;
-            m_accept_events_count = 0;
+            m_accept_events_count   = 0;
             return;
         }
 
@@ -301,7 +322,7 @@ namespace Tetris
             clock.restart();
         }
 
-        if(m_blocks.empty())
+        if (m_blocks.empty())
         {
             delete this;
         }
@@ -420,6 +441,11 @@ namespace Tetris
                 }
             }
         }
+
+        void rotate() override
+        {
+            Game::instance()->play_not_sound();
+        }
     };
 
     class TTetramino : public Tetramino
@@ -439,6 +465,10 @@ namespace Tetris
         bool can_rotate() override
         {
             Position pos = next_position(m_blocks[2]);
+
+            //            if (!is_valid_position(pos))
+            //                Game::instance()->play_not_sound();
+
             return is_valid_position(pos);
         }
 

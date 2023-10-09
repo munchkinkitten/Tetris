@@ -33,7 +33,6 @@ namespace Tetris
         bool m_need_create_tetramino = false;
         int m_accept_events_count = -1;
 
-
         static void load_textures();
         bool can_move(const Func1& f1, const Func2& f2) const;
         void move(int blocks, MoveDir dir);

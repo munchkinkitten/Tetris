@@ -2,6 +2,7 @@
 #include <backgroud.hpp>
 #include <game.hpp>
 #include <iostream>
+#include <score_counter.hpp>
 #include <tetramino.hpp>
 #include <thread>
 
@@ -11,9 +12,9 @@ namespace Tetris
 
     void Game::destroy_all()
     {
-        for (Object* object : Object::objects())
+        while (!Object::objects().empty())
         {
-            delete object;
+            delete (*Object::objects().begin());
         }
     }
 
@@ -47,12 +48,6 @@ namespace Tetris
         sf::Event event;
         while (window().pollEvent(event))
         {
-            if (m_stage == GameStage::GameOver)
-            {
-                for (int i = 0; i < 50; i++) std::clog << i << std::endl;
-                return;
-            }
-
             for (Object* object : Object::objects())
             {
                 object->process_event(event);
@@ -66,19 +61,64 @@ namespace Tetris
         srand(time(nullptr));
         new Background();
 
+        ScoreCounter::instance();
+
+        start_texture.loadFromFile("resources/enter.png");
+
+        start_sprite.setTexture(start_texture);
+
+        start_sprite.setPosition({static_cast<float>(m_window->getSize().x - start_texture.getSize().x) / 2,
+                                  static_cast<float>(m_window->getSize().y - start_texture.getSize().y) / 2});
+
+
         game_over_texture.loadFromFile("resources/game_over.png");
         game_over_sprite.setTexture(game_over_texture);
         game_over_sprite.setPosition({static_cast<float>(m_window->getSize().x - game_over_texture.getSize().x) / 2,
                                       static_cast<float>(m_window->getSize().y - game_over_texture.getSize().y) / 2});
 
+        music.openFromFile("resources/sounds/music.wav");
+        music.setVolume(60);
+
+        sb_rotate.loadFromFile("resources/sounds/rotate.wav");
+        ;
+        sb_delete_row.loadFromFile("resources/sounds/row_delete.wav");
+        sb_game_over.loadFromFile("resources/sounds/game_over.wav");
+        sb_not.loadFromFile("resources/sounds/not.wav");
+
+        rotate_sound.setBuffer(sb_rotate);
+        delete_row_sound.setBuffer(sb_delete_row);
+        game_over_sound.setBuffer(sb_game_over);
+        not_sound.setBuffer(sb_not);
+
         return *this;
+    }
+
+    bool Game::delete_row_is_playing()
+    {
+        return delete_row_sound.getStatus() == sf::Sound::Playing;
+    }
+
+    static bool is_pressed_key(sf::Keyboard::Key key, const sf::Event& event)
+    {
+        if (event.type != sf::Event::KeyPressed)
+        {
+            return false;
+        }
+
+        return event.key.code == key;
     }
 
     void Game::process_event(const sf::Event& event)
     {
         if (event.type == sf::Event::Closed)
         {
-            stage(GameStage::ForcedExit);
+            m_next_stage = GameStage::ForcedExit;
+        }
+
+        if ((m_stage == GameStage::GameOver || m_stage == GameStage::Launched) &&
+            is_pressed_key(sf::Keyboard::Enter, event))
+        {
+            m_next_stage = GameStage::Playing;
         }
     }
 
@@ -91,33 +131,65 @@ namespace Tetris
     {
         init();
 
-        m_stage = GameStage::Launched;
+        m_stage      = GameStage::Launched;
+        m_next_stage = GameStage::Launched;
 
-        while (start_window() != UserChoiceOnStartWindow::Exit)
+        music.setLoop(true);
+        music.play();
+
+        while (m_stage != GameStage::ForcedExit)
         {
-            Object::clean_tetraminos();
-            m_map->clean();
-            Tetramino::random_tetramino()->initialize();
+            process_events();
+            Object::update_all();
+            window().clear();
 
-            m_stage = GameStage::Playing;
-            while (m_stage == GameStage::Playing)
+            switch (m_stage)
             {
-                process_events();
-                // Update all
-                Object::update_all();
-
-                window().clear();
-                render_window();
-                window().display();
+                case GameStage::Launched:
+                    render_start();
+                    break;
+                case GameStage::GameOver:
+                    render_game_over();
+                    break;
+                case GameStage::Playing:
+                    render_game();
+                    break;
+                default:
+                    break;
             }
+
+            window().display();
+
+            m_stage = m_next_stage;
         }
 
         return 0;
     }
 
+    void Game::play_G_O_sound()
+    {
+        //music.stop();
+        game_over_sound.play();
+    }
+
+    void Game::play_rotate_sound()
+    {
+        rotate_sound.play();
+    }
+
+    void Game::play_delete_row_sound()
+    {
+        delete_row_sound.play();
+    }
+
+    void Game::play_not_sound()
+    {
+        not_sound.play();
+    }
+
     Game& Game::stage(GameStage stage)
     {
-        m_stage = stage;
+        m_next_stage = stage;
         return *this;
     }
 
@@ -126,39 +198,24 @@ namespace Tetris
         return m_stage;
     }
 
-
-    UserChoiceOnStartWindow Game::start_window()
-    {
-        if (m_stage == GameStage::ForcedExit)
-        {
-            return UserChoiceOnStartWindow::Exit;
-        }
-
-        if (m_stage == GameStage::GameOver)
-        {
-            game_over();
-            m_window->draw(game_over_sprite);
-            return UserChoiceOnStartWindow::Exit;
-        }
-
-        else if (m_stage == GameStage::Launched)
-        {
-        }
-
-        return UserChoiceOnStartWindow::StartGame;
-    }
-
-    void Game::game_over()
-    {
-        m_stage = GameStage::GameOver;
-    }
-
     sf::RenderWindow& Game::window() const
     {
         return *m_window;
     }
 
-    void Game::render_window()
+    void Game::render_start()
+    {
+        // Logic of rendering start window texture
+        render_game();
+        m_window->draw(start_sprite);
+
+        if (m_next_stage == GameStage::Playing)
+        {
+            Tetramino::random_tetramino()->initialize();
+        }
+    }
+
+    void Game::render_game()
     {
         Priority priority     = 0;
         Priority max_priority = Object::max_priority();
@@ -176,6 +233,21 @@ namespace Tetris
         }
     }
 
+    void Game::render_game_over()
+    {
+        // Logic of rendering game over texture
+        render_game();
+        m_window->draw(game_over_sprite);
+
+        if (m_next_stage == GameStage::Playing)
+        {
+            Object::clean_tetraminos();
+            m_map->clean();
+            Tetramino::random_tetramino()->initialize();
+            ScoreCounter::instance()->reset();
+        }
+    }
+
     static void delete_row(Row& row)
     {
         for (Block*& block : row)
@@ -183,6 +255,10 @@ namespace Tetris
             delete block;
             block = nullptr;
         }
+
+        if (!Game::instance()->delete_row_is_playing())
+            Game::instance()->play_delete_row_sound();
+        ScoreCounter::instance()->add_point();
     }
 
     void Game::update()
