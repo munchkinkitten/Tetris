@@ -51,10 +51,16 @@ namespace Tetris
         map->slot_at(pos) = this;
         m_position        = pos;
 
+        sf::Vector2f new_position = convert_to_screen_space(pos);
+        m_sprite->setPosition(new_position);
+    }
+
+    sf::Vector2f Block::convert_to_screen_space(Position pos)
+    {
         sf::Vector2f new_position = sf::Vector2f(pos.x, pos.y);
         new_position.x *= block_size;
         new_position.y *= block_size;
-        m_sprite->setPosition(new_position);
+        return new_position;
     }
 
     static void change_pos(Position& pos, MoveDir dir, int value)

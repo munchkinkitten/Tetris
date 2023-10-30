@@ -28,6 +28,8 @@ namespace Tetris
         Priority render_priority() const;
         void render_priority(Priority priority);
         bool is_tetramino() const;
+        virtual bool is_next_tetramino() const;
+        bool set_contains_tetramino() const;
 
         Object();
 

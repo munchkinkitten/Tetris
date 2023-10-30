@@ -31,9 +31,11 @@ namespace Tetris
     Game::Game()
     {
         m_game = this;
-        sf::VideoMode mode(400, 870);
+        //sf::VideoMode mode(400, 870);
+        sf::VideoMode mode(600, 870);
         m_window = new sf::RenderWindow(mode, "Tetris");
         m_window->setFramerateLimit(30);
+
         stage(GameStage::Launched);
     }
 
@@ -50,7 +52,8 @@ namespace Tetris
         {
             for (Object* object : Object::objects())
             {
-                object->process_event(event);
+                if (!object->is_next_tetramino())
+                    object->process_event(event);
             }
         }
     }
@@ -212,6 +215,7 @@ namespace Tetris
         if (m_next_stage == GameStage::Playing)
         {
             Tetramino::random_tetramino()->initialize();
+            Tetramino::init_next_tetramino();
         }
     }
 

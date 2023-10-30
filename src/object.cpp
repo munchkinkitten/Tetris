@@ -1,5 +1,5 @@
-#include <object.hpp>
 #include <list>
+#include <object.hpp>
 
 namespace Tetris
 {
@@ -19,15 +19,15 @@ namespace Tetris
     void Object::clean_tetraminos()
     {
         std::list<Object*> tetraminos;
-        for(Object* object : m_objects)
+        for (Object* object : m_objects)
         {
-            if(object->is_tetramino())
+            if (object->is_tetramino())
             {
                 tetraminos.push_back(object);
             }
         }
 
-        for(Object* tetramino : tetraminos)
+        for (Object* tetramino : tetraminos)
         {
             delete tetramino;
         }
@@ -52,6 +52,11 @@ namespace Tetris
         return m_is_tetramino;
     }
 
+    bool Object::is_next_tetramino() const
+    {
+        return false;
+    }
+
     Object::Object()
     {
         m_objects.insert(this);
@@ -61,14 +66,27 @@ namespace Tetris
     {
         for (Object* object : Object::objects())
         {
-            object->update();
+            if (!is_next_tetramino())
+                object->update();
         }
     }
 
-//    void Object::set_update_status(bool active)
-//    {
-//        m_update_status = active;
-//    }
+    bool Object::set_contains_tetramino() const
+    {
+        for (auto i : m_objects)
+        {
+            if (i->is_tetramino())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    //    void Object::set_update_status(bool active)
+    //    {
+    //        m_update_status = active;
+    //    }
 
     void Object::update()
     {}

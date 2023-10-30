@@ -34,6 +34,7 @@ namespace Tetris
 
         const Position& position() const;
         void position(const Position& pos);
+        static sf::Vector2f convert_to_screen_space(Position position);
 
         Tetramino* tetramino() const;
         sf::Sprite* sprite() const;
